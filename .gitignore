@@ -216,3 +216,58 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Mac files
+.DS_Store
+
+# Logs
+*.log
+
+# Docker
+*.tar
+
+# Node modules
+node_modules/
+
+# React build files
+build/
+dist/
+
+# Coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+temp/
+tmp/
+
+# OS files
+Thumbs.db

@@ -1,6 +1,5 @@
 # PharmaChain
 
-
 PharmaChain is a microservices-based pharmacy management system built using FastAPI, Docker, SQLite, and a frontend interface. The project demonstrates modern backend architecture with authentication, inventory management, sales management, API gateway integration, and containerized deployment.
 
 ---

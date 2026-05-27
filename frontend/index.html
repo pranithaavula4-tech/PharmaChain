@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmaChain — Store Operations</title>
+<style>
+  :root {
+    --bg: #f5f6fa; --surface: #ffffff; --primary: #2563eb; --primary-dark: #1d4ed8;
+    --success: #16a34a; --warning: #d97706; --danger: #dc2626;
+    --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
+    --sidebar-bg: #1e293b; --sidebar-text: #94a3b8; --sidebar-active: #2563eb;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display:flex; height:100vh; overflow:hidden; }
+
+  /* ── Login ── */
+  #login-screen {
+    display:flex; align-items:center; justify-content:center; width:100vw; height:100vh;
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%);
+  }
+  .login-box { background:white; border-radius:16px; padding:40px; width:360px; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .login-box h1 { font-size:22px; color:#1e293b; margin-bottom:4px; }
+  .login-box p  { font-size:13px; color:var(--muted); margin-bottom:28px; }
+  .login-box input { width:100%; border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:14px; margin-bottom:12px; outline:none; }
+  .login-box input:focus { border-color:var(--primary); }
+  .login-box button { width:100%; background:var(--primary); color:white; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:600; cursor:pointer; }
+  .login-box button:hover { background:var(--primary-dark); }
+  .login-error { color:var(--danger); font-size:13px; margin-top:8px; display:none; }
+  .demo-creds { margin-top:20px; background:#f8fafc; border-radius:8px; padding:12px; font-size:12px; color:var(--muted); }
+  .demo-creds b { color:#1e293b; }
+
+  /* ── Layout ── */
+  #app { display:none; width:100%; }
+  .sidebar {
+    width:220px; background:var(--sidebar-bg); color:var(--sidebar-text);
+    display:flex; flex-direction:column; flex-shrink:0; height:100vh; overflow-y:auto;
+  }
+  .sidebar-logo { padding:20px 16px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .sidebar-logo h2 { color:white; font-size:18px; font-weight:700; }
+  .sidebar-logo p  { font-size:11px; color:var(--sidebar-text); margin-top:2px; }
+  .nav-section { padding:12px 0; }
+  .nav-label { font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; padding:0 16px 6px; color:#475569; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 16px; font-size:13px; cursor:pointer; border-left:3px solid transparent; transition:all .15s; }
+  .nav-item:hover   { background:rgba(255,255,255,0.05); color:white; }
+  .nav-item.active  { background:rgba(37,99,235,0.15); color:white; border-left-color:var(--sidebar-active); }
+  .nav-item .icon   { font-size:16px; width:20px; text-align:center; }
+  .sidebar-footer   { margin-top:auto; padding:16px; border-top:1px solid rgba(255,255,255,0.08); font-size:12px; }
+  .user-badge { background:rgba(255,255,255,0.08); border-radius:8px; padding:10px; }
+  .user-badge .name { color:white; font-weight:600; font-size:13px; }
+  .user-badge .role { color:var(--sidebar-text); font-size:11px; margin-top:2px; }
+  .logout-btn { margin-top:8px; font-size:12px; color:#94a3b8; cursor:pointer; }
+  .logout-btn:hover { color:white; }
+
+  /* ── Main ── */
+  .main { flex:1; overflow-y:auto; display:flex; flex-direction:column; }
+  .topbar { background:white; border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .topbar h2 { font-size:17px; font-weight:600; }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .badge-pill { background:#eff6ff; color:var(--primary); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px; }
+  .content { padding:24px; flex:1; }
+
+  /* ── Cards ── */
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  .stat-card { background:white; border-radius:12px; padding:20px; border:1px solid var(--border); }
+  .stat-card .label { font-size:12px; color:var(--muted); font-weight:500; margin-bottom:8px; }
+  .stat-card .value { font-size:26px; font-weight:700; }
+  .stat-card .sub   { font-size:12px; color:var(--muted); margin-top:4px; }
+  .stat-card.blue   { border-top:3px solid var(--primary); }
+  .stat-card.green  { border-top:3px solid var(--success); }
+  .stat-card.orange { border-top:3px solid var(--warning); }
+  .stat-card.red    { border-top:3px solid var(--danger); }
+
+  /* ── Panels ── */
+  .panel { background:white; border-radius:12px; border:1px solid var(--border); margin-bottom:20px; }
+  .panel-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .panel-header h3 { font-size:14px; font-weight:600; }
+  .panel-body { padding:20px; }
+
+  /* ── Table ── */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:10px 12px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; background:#f8fafc; border-bottom:1px solid var(--border); }
+  td { padding:10px 12px; border-bottom:1px solid var(--border); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#f8fafc; }
+
+  /* ── Badges ── */
+  .tag { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+  .tag-success { background:#dcfce7; color:#16a34a; }
+  .tag-warning { background:#fef3c7; color:#d97706; }
+  .tag-danger  { background:#fee2e2; color:#dc2626; }
+  .tag-blue    { background:#eff6ff; color:#2563eb; }
+  .tag-purple  { background:#f5f3ff; color:#7c3aed; }
+
+  /* ── Forms ── */
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+  .form-group label { font-size:12px; font-weight:600; color:var(--muted); }
+  .form-group input, .form-group select {
+    border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:13px; outline:none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color:var(--primary); }
+  .btn { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+  .btn-primary { background:var(--primary); color:white; }
+  .btn-primary:hover { background:var(--primary-dark); }
+  .btn-success { background:var(--success); color:white; }
+  .btn-danger  { background:var(--danger); color:white; }
+  .btn-ghost   { background:#f1f5f9; color:var(--text); }
+  .btn-ghost:hover { background:#e2e8f0; }
+  .btn-sm      { padding:5px 12px; font-size:12px; }
+
+  /* ── POS ── */
+  .pos-layout { display:grid; grid-template-columns:1fr 360px; gap:20px; }
+  .pos-cart { background:#f8fafc; border-radius:12px; padding:16px; }
+  .cart-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .cart-total { display:flex; justify-content:space-between; padding:10px 0; font-weight:700; }
+  .cart-total.big { font-size:18px; color:var(--primary); }
+  .cart-gst   { display:flex; justify-content:space-between; padding:4px 0; font-size:12px; color:var(--muted); }
+  .remove-btn { background:none; border:none; color:var(--danger); cursor:pointer; font-size:16px; }
+
+  /* ── Alerts ── */
+  .alert-item { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .alert-item:last-child { border-bottom:none; }
+
+  /* ── Toast ── */
+  #toast { position:fixed; bottom:24px; right:24px; background:#1e293b; color:white; padding:12px 20px; border-radius:10px; font-size:13px; transform:translateY(80px); opacity:0; transition:all .3s; z-index:999; pointer-events:none; }
+  #toast.show { transform:translateY(0); opacity:1; }
+
+  /* ── Tab pages ── */
+  .page { display:none; }
+  .page.active { display:block; }
+
+  /* ── Responsive ── */
+  @media (max-width:768px) {
+    .stats-grid { grid-template-columns:1fr 1fr; }
+    .pos-layout { grid-template-columns:1fr; }
+    .form-grid  { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>💊 PharmaChain</h1>
+    <p>Store Operations Platform — Login to continue</p>
+    <input type="text" id="username" placeholder="Username" value="admin">
+    <input type="password" id="password" placeholder="Password" value="admin123">
+    <button onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error">Invalid credentials. Please try again.</div>
+    <div class="demo-creds">
+      <!-- <b>Demo accounts:</b><br>
+      admin / admin123 &nbsp;|&nbsp; pharmacist / pharma123<br>
+      supervisor / super123 &nbsp;|&nbsp; finance / finance123 -->
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2>💊 PharmaChain</h2>
+      <p>Store Operations v1.0</p>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Operations</div>
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('pos')"><span class="icon">🛒</span> Point of Sale</div>
+      <div class="nav-item" onclick="showPage('inventory')"><span class="icon">📦</span> Inventory</div>
+      <div class="nav-item" onclick="showPage('sales')"><span class="icon">🧾</span> Sales History</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Analytics</div>
+      <div class="nav-item" onclick="showPage('alerts')"><span class="icon">🔔</span> Alerts</div>
+      <div class="nav-item" onclick="showPage('reports')"><span class="icon">📈</span> Reports</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="name" id="sidebar-name">—</div>
+        <div class="role" id="sidebar-role">—</div>
+      </div>
+      <div class="logout-btn" onclick="logout()">⬅ Sign out</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="page-title">Dashboard</h2>
+      <div class="topbar-right">
+        <span id="topbar-role" class="badge-pill">admin</span>
+        <span id="topbar-time" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="label">Total Products</div>
+            <div class="value" id="stat-products">—</div>
+            <div class="sub">Active SKUs</div>
+          </div>
+          <div class="stat-card green">
+            <div class="label">Total Revenue</div>
+            <div class="value" id="stat-revenue">—</div>
+            <div class="sub">All invoices</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="label">Total Invoices</div>
+            <div class="value" id="stat-invoices">—</div>
+            <div class="sub">Sales recorded</div>
+          </div>
+          <div class="stat-card red">
+            <div class="label">Low Stock Items</div>
+            <div class="value" id="stat-lowstock">—</div>
+            <div class="sub">Needs reorder</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div class="panel">
+            <div class="panel-header"><h3>⚠️ Low Stock Alerts</h3></div>
+            <div class="panel-body" id="dash-lowstock">Loading…</div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>🕐 Recent Sales</h3></div>
+            <div class="panel-body" id="dash-sales">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── POS ── -->
+      <div class="page" id="page-pos">
+        <div class="pos-layout">
+          <div>
+            <div class="panel">
+              <div class="panel-header"><h3>Add Item to Cart</h3></div>
+              <div class="panel-body">
+                <div style="display:flex;gap:10px;margin-bottom:16px;">
+                  <select id="pos-sku" style="flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;">
+                    <option value="">-- Select Product --</option>
+                  </select>
+                  <input type="number" id="pos-qty" value="1" min="1" style="width:80px;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;">
+                  <button class="btn btn-primary" onclick="addToCart()">Add</button>
+                </div>
+                <div id="product-info" style="font-size:13px;color:var(--muted);min-height:32px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="pos-cart">
+            <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;">🛒 Cart</h3>
+            <div id="cart-items"></div>
+            <div style="border-top:2px solid var(--border);margin-top:8px;padding-top:8px;">
+              <div class="cart-gst"><span>Subtotal</span><span id="cart-subtotal">₹0.00</span></div>
+              <div class="cart-gst"><span>GST (12%)</span><span id="cart-gst">₹0.00</span></div>
+              <div class="cart-total big"><span>Total</span><span id="cart-total">₹0.00</span></div>
+            </div>
+            <div style="margin-top:12px;">
+              <select id="payment-mode" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px;font-size:13px;margin-bottom:10px;outline:none;">
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="upi">UPI</option>
+                <option value="insurance">Insurance</option>
+              </select>
+              <button class="btn btn-success" style="width:100%;" onclick="checkoutCart()">✅ Checkout & Print Invoice</button>
+              <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px;" onclick="clearCart()">Clear Cart</button>
+            </div>
+            <div id="last-invoice" style="margin-top:16px;font-size:12px;color:var(--muted);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── INVENTORY ── -->
+      <div class="page" id="page-inventory">
+        <div class="panel" style="margin-bottom:16px;">
+          <div class="panel-header"><h3>Add New Product</h3></div>
+          <div class="panel-body">
+            <div class="form-grid">
+              <div class="form-group"><label>SKU *</label><input id="f-sku" placeholder="e.g. PCM500"></div>
+              <div class="form-group"><label>Name *</label><input id="f-name" placeholder="Product name"></div>
+              <div class="form-group"><label>Category</label><input id="f-cat" placeholder="e.g. Antibiotic"></div>
+              <div class="form-group"><label>Price (₹) *</label><input id="f-price" type="number" placeholder="0.00"></div>
+              <div class="form-group"><label>Quantity *</label><input id="f-qty" type="number" placeholder="0"></div>
+              <div class="form-group"><label>Batch No.</label><input id="f-batch" placeholder="B001"></div>
+              <div class="form-group"><label>Expiry Date *</label><input id="f-expiry" type="date"></div>
+              <div class="form-group"><label>Supplier</label><input id="f-supplier" placeholder="Supplier name"></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="addProduct()">➕ Add Product</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <h3>📦 All Products</h3>
+            <button class="btn btn-ghost btn-sm" onclick="loadInventory()">↻ Refresh</button>
+          </div>
+          <div class="panel-body" style="padding:0;">
+            <div id="inventory-table">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SALES HISTORY ── -->
+      <div class="page" id="page-sales">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>🧾 Sales History</h3>
+            <button class="btn btn-ghost btn-sm" onclick="loadSales()">↻ Refresh</button>
+          </div>
+          <div class="panel-body" style="padding:0;">
+            <div id="sales-table">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ALERTS ── -->
+      <div class="page" id="page-alerts">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div class="panel">
+            <div class="panel-header"><h3>⚠️ Low Stock Items</h3></div>
+            <div class="panel-body" id="low-stock-list">Loading…</div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>📅 Expiring Soon</h3></div>
+            <div class="panel-body" id="expiry-list">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── REPORTS ── -->
+      <div class="page" id="page-reports">
+        <div class="stats-grid" id="report-stats"></div>
+        <div class="panel">
+          <div class="panel-header"><h3>📈 Sales Overview</h3></div>
+          <div class="panel-body" id="report-body">Loading…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────
+const API = 'http://localhost:8000';
+let token = null;
+let currentUser = null;
+let cart = [];
+let allProducts = [];
+
+// ── Utilities ────────────────────────────────────────────────────
+function toast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = ok ? '#1e293b' : '#dc2626';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function api(method, path, body=null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── Auth ─────────────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  try {
+    const form = new URLSearchParams({ username, password });
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form
+    });
+    if (!res.ok) throw new Error('Invalid credentials');
+    const data = await res.json();
+    token = data.access_token;
+    currentUser = { name: data.name, role: data.role };
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('sidebar-name').textContent = data.name;
+    document.getElementById('sidebar-role').textContent = data.role.toUpperCase();
+    document.getElementById('topbar-role').textContent = data.role;
+    loadDashboard();
+  } catch(e) {
+    const el = document.getElementById('login-error');
+    el.style.display = 'block';
+    el.textContent = e.message;
+  }
+}
+
+function logout() {
+  token = null; currentUser = null; cart = []; allProducts = [];
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+// ── Navigation ───────────────────────────────────────────────────
+const pageTitles = { dashboard:'Dashboard', pos:'Point of Sale', inventory:'Inventory', sales:'Sales History', alerts:'Alerts', reports:'Reports' };
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.toLowerCase().includes(pageTitles[name].toLowerCase().slice(0,5))) n.classList.add('active'); });
+  document.getElementById('page-title').textContent = pageTitles[name];
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'inventory') loadInventory();
+  if (name === 'sales') loadSales();
+  if (name === 'alerts') loadAlerts();
+  if (name === 'reports') loadReports();
+  if (name === 'pos') loadPOS();
+}
+
+// ── Dashboard ────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [products, summary, lowstock] = await Promise.all([
+      api('GET', '/inventory/products'),
+      api('GET', '/sales/summary'),
+      api('GET', '/inventory/alerts/low-stock'),
+    ]);
+    document.getElementById('stat-products').textContent = products.length;
+    document.getElementById('stat-revenue').textContent = '₹' + summary.total_revenue.toLocaleString();
+    document.getElementById('stat-invoices').textContent = summary.total_invoices;
+    document.getElementById('stat-lowstock').textContent = lowstock.length;
+
+    const ls = document.getElementById('dash-lowstock');
+    ls.innerHTML = lowstock.length === 0 ? '<p style="color:var(--success);font-size:13px;">✅ No low stock issues</p>'
+      : lowstock.map(i => `<div class="alert-item"><div><b>${i.name}</b><br><span style="font-size:11px;color:var(--muted)">${i.sku}</span></div><span class="tag tag-danger">${i.quantity} left</span></div>`).join('');
+
+    const sales = await api('GET', '/sales');
+    const ds = document.getElementById('dash-sales');
+    ds.innerHTML = sales.length === 0 ? '<p style="font-size:13px;color:var(--muted);">No sales yet.</p>'
+      : sales.slice(0,5).map(s => `<div class="alert-item"><div><b>${s.invoice_no}</b><br><span style="font-size:11px;color:var(--muted)">${new Date(s.timestamp).toLocaleString()}</span></div><span class="tag tag-success">₹${s.total}</span></div>`).join('');
+  } catch(e) { toast('Could not load dashboard. Is the API running?', false); }
+}
+
+// ── POS ──────────────────────────────────────────────────────────
+async function loadPOS() {
+  try {
+    allProducts = await api('GET', '/inventory/products');
+    const sel = document.getElementById('pos-sku');
+    sel.innerHTML = '<option value="">-- Select Product --</option>' +
+      allProducts.map(p => `<option value="${p.sku}">${p.name} (${p.sku}) — ₹${p.price}</option>`).join('');
+    sel.onchange = () => {
+      const p = allProducts.find(x => x.sku === sel.value);
+      document.getElementById('product-info').innerHTML = p
+        ? `<b>${p.name}</b> &nbsp;|&nbsp; Price: <b>₹${p.price}</b> &nbsp;|&nbsp; In stock: <b>${p.quantity}</b> &nbsp;|&nbsp; Batch: ${p.batch_no} &nbsp;|&nbsp; Expiry: ${p.expiry}`
+        : '';
+    };
+    renderCart();
+  } catch(e) { toast('Load POS failed', false); }
+}
+
+function addToCart() {
+  const sku = document.getElementById('pos-sku').value;
+  const qty = parseInt(document.getElementById('pos-qty').value) || 1;
+  if (!sku) { toast('Select a product first', false); return; }
+  const p = allProducts.find(x => x.sku === sku);
+  if (!p) return;
+  const existing = cart.find(x => x.sku === sku);
+  if (existing) existing.quantity += qty;
+  else cart.push({ sku: p.sku, name: p.name, quantity: qty, unit_price: p.price });
+  renderCart();
+  toast(`Added ${qty}x ${p.name}`);
+}
+
+function removeFromCart(sku) {
+  cart = cart.filter(x => x.sku !== sku);
+  renderCart();
+}
+
+function renderCart() {
+  const subtotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+  const gst = subtotal * 0.12;
+  const total = subtotal + gst;
+  document.getElementById('cart-subtotal').textContent = '₹' + subtotal.toFixed(2);
+  document.getElementById('cart-gst').textContent = '₹' + gst.toFixed(2);
+  document.getElementById('cart-total').textContent = '₹' + total.toFixed(2);
+  const el = document.getElementById('cart-items');
+  if (cart.length === 0) { el.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:8px 0;">Cart is empty</p>'; return; }
+  el.innerHTML = cart.map(i => `
+    <div class="cart-item">
+      <div><b>${i.name}</b><br><span style="font-size:11px;color:var(--muted)">${i.sku} × ${i.quantity}</span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span>₹${(i.unit_price * i.quantity).toFixed(2)}</span>
+        <button class="remove-btn" onclick="removeFromCart('${i.sku}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function clearCart() { cart = []; renderCart(); document.getElementById('last-invoice').innerHTML = ''; }
+
+async function checkoutCart() {
+  if (cart.length === 0) { toast('Cart is empty', false); return; }
+  try {
+    const res = await api('POST', '/sales', {
+      items: cart.map(i => ({ sku: i.sku, quantity: i.quantity })),
+      cashier: currentUser?.name || 'pharmacist',
+      payment_mode: document.getElementById('payment-mode').value,
+      branch: 'HQ'
+    });
+    toast(`Invoice ${res.invoice_no} — ₹${res.total} ✅`);
+    document.getElementById('last-invoice').innerHTML =
+      `<b>Last Invoice:</b> ${res.invoice_no}<br>Total: ₹${res.total} | ${res.payment_mode.toUpperCase()}<br>${new Date().toLocaleString()}`;
+    clearCart();
+    loadPOS();
+  } catch(e) { toast(e.message, false); }
+}
+
+// ── Inventory ────────────────────────────────────────────────────
+async function loadInventory() {
+  try {
+    const products = await api('GET', '/inventory/products');
+    allProducts = products;
+    const el = document.getElementById('inventory-table');
+    if (products.length === 0) { el.innerHTML = '<p style="padding:20px;color:var(--muted);">No products found.</p>'; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Price</th><th>Qty</th><th>Batch</th><th>Expiry</th><th>Supplier</th><th>Status</th></tr></thead>
+      <tbody>${products.map(p => {
+        const qty = p.quantity;
+        const thresh = p.low_stock_threshold || 10;
+        const status = qty <= 0 ? '<span class="tag tag-danger">Out</span>'
+                     : qty <= thresh ? '<span class="tag tag-warning">Low</span>'
+                     : '<span class="tag tag-success">OK</span>';
+        const today = new Date().toISOString().split('T')[0];
+        const expStatus = p.expiry < today ? '<span class="tag tag-danger">Expired</span>' : '';
+        return `<tr>
+          <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px">${p.sku}</code></td>
+          <td><b>${p.name}</b></td>
+          <td>${p.category||'—'}</td>
+          <td>₹${p.price}</td>
+          <td><b>${qty}</b></td>
+          <td>${p.batch_no||'—'}</td>
+          <td>${p.expiry||'—'} ${expStatus}</td>
+          <td>${p.supplier||'—'}</td>
+          <td>${status}</td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+  } catch(e) { toast('Failed to load inventory', false); }
+}
+
+async function addProduct() {
+  const data = {
+    sku: document.getElementById('f-sku').value.trim(),
+    name: document.getElementById('f-name').value.trim(),
+    category: document.getElementById('f-cat').value.trim() || 'General',
+    price: parseFloat(document.getElementById('f-price').value),
+    quantity: parseInt(document.getElementById('f-qty').value),
+    batch_no: document.getElementById('f-batch').value.trim() || 'B001',
+    expiry: document.getElementById('f-expiry').value || '2026-12-31',
+    supplier: document.getElementById('f-supplier').value.trim() || 'Generic',
+  };
+  if (!data.sku || !data.name || !data.price || !data.quantity) { toast('Fill all required fields', false); return; }
+  try {
+    await api('POST', '/inventory/products', data);
+    toast('Product added ✅');
+    ['f-sku','f-name','f-cat','f-price','f-qty','f-batch','f-expiry','f-supplier'].forEach(id => document.getElementById(id).value = '');
+    loadInventory();
+  } catch(e) { toast(e.message, false); }
+}
+
+// ── Sales ────────────────────────────────────────────────────────
+async function loadSales() {
+  try {
+    const sales = await api('GET', '/sales');
+    const el = document.getElementById('sales-table');
+    if (sales.length === 0) { el.innerHTML = '<p style="padding:20px;color:var(--muted);">No sales recorded yet.</p>'; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Invoice No.</th><th>Date/Time</th><th>Items</th><th>Subtotal</th><th>GST</th><th>Total</th><th>Payment</th><th>Cashier</th></tr></thead>
+      <tbody>${sales.map(s => `<tr>
+        <td><b>${s.invoice_no}</b></td>
+        <td>${new Date(s.timestamp).toLocaleString()}</td>
+        <td>${(s.items||[]).map(i=>`${i.name} ×${i.quantity}`).join(', ')}</td>
+        <td>₹${s.subtotal}</td>
+        <td>₹${s.gst}</td>
+        <td><b>₹${s.total}</b></td>
+        <td><span class="tag tag-blue">${s.payment_mode}</span></td>
+        <td>${s.cashier||'—'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e) { toast('Failed to load sales', false); }
+}
+
+// ── Alerts ───────────────────────────────────────────────────────
+async function loadAlerts() {
+  try {
+    const [low, exp] = await Promise.all([
+      api('GET', '/inventory/alerts/low-stock'),
+      api('GET', '/inventory/alerts/expiring')
+    ]);
+    const ls = document.getElementById('low-stock-list');
+    ls.innerHTML = low.length === 0 ? '<p style="color:var(--success);font-size:13px;">✅ All products adequately stocked</p>'
+      : low.map(i => `<div class="alert-item"><div><b>${i.name}</b> <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px">${i.sku}</code><br><span style="font-size:11px;color:var(--muted)">${i.branch}</span></div><span class="tag tag-danger">${i.quantity} / ${i.threshold} min</span></div>`).join('');
+    const exl = document.getElementById('expiry-list');
+    exl.innerHTML = exp.length === 0 ? '<p style="color:var(--success);font-size:13px;">✅ No upcoming expirations</p>'
+      : exp.map(i => `<div class="alert-item"><div><b>${i.name}</b> <code style="font-size:11px;background:#f1f5f9;padding:1px 5px;border-radius:4px">${i.sku}</code><br><span style="font-size:11px;color:var(--muted)">Qty: ${i.quantity}</span></div><span class="tag tag-warning">${i.expiry}</span></div>`).join('');
+  } catch(e) { toast('Failed to load alerts', false); }
+}
+
+// ── Reports ──────────────────────────────────────────────────────
+async function loadReports() {
+  try {
+    const [summary, sales, products] = await Promise.all([
+      api('GET', '/sales/summary'),
+      api('GET', '/sales'),
+      api('GET', '/inventory/products')
+    ]);
+    document.getElementById('report-stats').innerHTML = `
+      <div class="stat-card blue"><div class="label">Total Invoices</div><div class="value">${summary.total_invoices}</div></div>
+      <div class="stat-card green"><div class="label">Total Revenue</div><div class="value">₹${summary.total_revenue.toLocaleString()}</div></div>
+      <div class="stat-card orange"><div class="label">Avg Order Value</div><div class="value">₹${summary.average_order_value}</div></div>
+      <div class="stat-card red"><div class="label">SKUs Tracked</div><div class="value">${products.length}</div></div>`;
+
+    // Category breakdown
+    const catMap = {};
+    products.forEach(p => { catMap[p.category||'Other'] = (catMap[p.category||'Other']||0) + 1; });
+    const rows = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+
+    document.getElementById('report-body').innerHTML = `
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;">Products by Category</h4>
+      <table><thead><tr><th>Category</th><th>SKUs</th></tr></thead>
+      <tbody>${rows.map(([cat,cnt])=>`<tr><td>${cat}</td><td><span class="tag tag-blue">${cnt}</span></td></tr>`).join('')}</tbody></table>`;
+  } catch(e) { toast('Failed to load reports', false); }
+}
+
+// ── Clock ─────────────────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('topbar-time').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+// Enter key on login
+document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+</script>
+</body>
+</html>

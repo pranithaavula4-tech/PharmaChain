@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  auth_service:
+    build: ./auth_service
+    ports:
+      - "8001:8000"
+    environment:
+      - SECRET_KEY=pharmachain-secret-2024
+    restart: unless-stopped
+
+  inventory_service:
+    build: ./inventory_service
+    ports:
+      - "8002:8000"
+    volumes:
+      - inventory_data:/app
+    restart: unless-stopped
+
+  sales_service:
+    build: ./sales_service
+    ports:
+      - "8003:8000"
+    volumes:
+      - sales_data:/app
+    environment:
+      - INVENTORY_URL=http://inventory_service:8000
+    depends_on:
+      - inventory_service
+    restart: unless-stopped
+
+  api_gateway:
+    build: ./api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_URL=http://auth_service:8000
+      - INVENTORY_URL=http://inventory_service:8000
+      - SALES_URL=http://sales_service:8000
+    depends_on:
+      - auth_service
+      - inventory_service
+      - sales_service
+    restart: unless-stopped
+
+volumes:
+  inventory_data:
+  sales_data:
